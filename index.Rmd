@@ -448,6 +448,8 @@ Share a wiggliness penalty (plus $\lambda$ for intercepts & slopes)
 .center[![:scale 70%](./resources/arthropod-abundance-m3.svg)
 ]
 
+Pedersen _et al_ (2019) [PeerJ **7**:e6876](https://doi.org/10.7717/peerj.6876)
+
 ---
 
 # Model A
