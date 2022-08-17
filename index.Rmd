@@ -1,0 +1,556 @@
+---
+title: "Quantifying trends in biodiversity with generalized additive models"
+author: "Gavin Simpson"
+institute: "Department of Animal Science, Aarhus University"
+date: "August 18, 2022"
+output:
+  xaringan::moon_reader:
+    css: ['default', 'https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css', 'slides.css']
+    lib_dir: libs
+    nature:
+      titleSlideClass: ['inverse','middle','left',my-title-slide]
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      beforeInit: "macros.js"
+      ratio: '16:9'
+---
+
+```{r setup, include=FALSE, cache=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(cache = TRUE, dev = 'svg', echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.height=6, fig.width = 1.777777*6)
+
+library("curl")
+library('here')
+library('mgcv')
+library('gratia')
+library('ggplot2')
+library('purrr')
+library('mvnfast')
+library("tibble")
+library('gganimate')
+library('tidyr')
+library("knitr")
+library("viridis")
+library('readr')
+library('dplyr')
+library('gganimate')
+
+## plot defaults
+theme_set(theme_minimal(base_size = 16, base_family = 'Fira Sans'))
+
+## constants
+anim_width <- 1000
+anim_height <- anim_width / 1.77777777
+anim_dev <- 'png'
+anim_res <- 200
+```
+
+# Biodiversity losses
+
+.center[![:scale 75%](./resources/living-planet-index-by-region.svg)
+]
+
+???
+
+Many of us will be familiar with trends like this
+
+Global biodiversity is in trouble
+
+Wherever we look we see declining populations
+
+Living Plant Index is an average measure of change (so some time series in a region could be increasing even if overall we have a decline in LPI)
+
+---
+
+# Biodiversity losses..?
+
+.center[![:scale 100%](./resources/vellend-et-al-2013.png)
+]
+
+Vellend *et al* (2013) *PNAS*
+
+.center[![:scale 100%](./resources/dornelas-et-al-2014.png)
+]
+
+Dornelas *et al* 2014 *Science*
+
+???
+
+But studies showing declining biodiversity are not without issue
+
+There has been a decade or more long discussion about the extent to which diversity is declining
+
+---
+
+# Biodiversity losses..?
+
+.center[![:scale 100%](./resources/gonzalez-et-al-2016.png)
+]
+
+Gonzalez *et al* (2016) *Ecology*
+
+.center[![:scale 100%](./resources/vellend-et-al-2017.png)
+]
+
+Vellend *et al* 2017 *Ecology*
+
+---
+
+# Biodiversity gains & losses
+
+.center[![:scale 75%](./resources/dornelas-et-al-2019.png)
+]
+
+Dornelas *et al* (2019) *Ecology Letters*
+
+In part disagreement relates to *population* versus *assemblage* level metrics
+
+Partly due to how the data are analysed
+
+---
+
+# Linear trends
+
+Majority of these large-scale syntheses use linear trend models
+
+.center[![:scale 75%](./resources/dornelas-et-al-2014-fig-2.jpeg)
+]
+
+Fig 2 from Dornelas *et al* (2014) *Science*
+
+$y_i$ sometimes transformed
+
+---
+
+# Seibold et al 2019
+
+Analysed 150 grassland and 140 forest sites across 3 regions of Gernmany 2008&ndash;2017
+
+.center[![:scale 75%](./resources/seibold-et-al-2019.png)
+]
+
+Seibold *et al* (2019) *Nature*
+
+---
+
+# Declining arthopod biomass, abundance, and richness
+
+.center[![:scale 60%](./resources/seibold-et-al-fig-1.svg)
+]
+
+Seibold *et al* (2019) *Nature*
+
+---
+
+# Declining arthopod biomass, abundance, and richness
+
+* Grasslands
+
+    * Biomass &#8595; 67%
+
+    * Abundance &#8595; 78%
+
+    * Richness &#8595; 36%
+
+* Forests (30 site subset)
+
+    * Biomass &#8595; 41%
+
+    * Richness &#8595; 36%
+
+---
+
+# Good and bad years
+
+.center[
+![:scale 60%](./resources/fournier-et-al-2019.svg)
+]
+
+Fournier *et al* (2019) *Conservation Biology* [doi: 10.1111/cobi.13371](https://doi.org/10.1111/cobi.13371)
+
+---
+
+# Good and bad years
+
+Daskalova *et al* (2021) attempted to account for this effect using random effects of `Year`
+
+.center[
+![:scale 75%](./resources/daskalova-et-al-2021-fig-1.svg)
+]
+
+Daskalova *et al* (2021) *Insect Conservation & Diversity*
+
+---
+
+# Generalized Additive Models
+
+<br />
+
+![](resources/tradeoff-slider.png)
+
+.references[Source: [GAMs in R by Noam Ross](https://noamross.github.io/gams-in-r-course/)]
+
+GAMs are an intermediate-complexity model
+
+* can learn from data without needing to be informed by the user
+* remain interpretable because we can visualize the fitted features
+* fit smooth functions using penalised splines
+
+---
+
+```{r smooth-fun-animation, results = FALSE, echo = FALSE}
+f <- function(x) {
+    x^11 * (10 * (1 - x))^6 + ((10 * (10 * x)^3) * (1 - x)^10)
+}
+
+draw_beta <- function(n, k, mu = 1, sigma = 1) {
+    rmvn(n = n, mu = rep(mu, k), sigma = diag(rep(sigma, k)))
+}
+
+weight_basis <- function(bf, x, n = 1, k, ...) {
+    beta <- draw_beta(n = n, k = k, ...)
+    out <- sweep(bf, 2L, beta, '*')
+    colnames(out) <- paste0('f', seq_along(beta))
+    out <- as_tibble(out)
+    out <- add_column(out, x = x)
+    out <- pivot_longer(out, -x, names_to = 'bf', values_to = 'y')
+    out
+}
+
+random_bases <- function(bf, x, draws = 10, k, ...) {
+    out <- rerun(draws, weight_basis(bf, x = x, k = k, ...))
+    out <- bind_rows(out)
+    out <- add_column(out, draw = rep(seq_len(draws), each = length(x) * k),
+                      .before = 1L)
+    class(out) <- c("random_bases", class(out))
+    out
+}
+
+plot.random_bases <- function(x, facet = FALSE) {
+    plt <- ggplot(x, aes(x = x, y = y, colour = bf)) +
+        geom_line(lwd = 1, alpha = 0.75) +
+        guides(colour = "none")
+    if (facet) {
+        plt + facet_wrap(~ draw)
+    }
+    plt
+}
+
+normalize <- function(x) {
+    rx <- range(x)
+    z <- (x - rx[1]) / (rx[2] - rx[1])
+    z
+}
+
+set.seed(1)
+N <- 500
+data <- tibble(x     = runif(N),
+               ytrue = f(x),
+               ycent = ytrue - mean(ytrue),
+               yobs  = ycent + rnorm(N, sd = 0.5))
+
+k <- 10
+knots <- with(data, list(x = seq(min(x), max(x), length = k)))
+sm <- smoothCon(s(x, k = k, bs = "cr"), data = data, knots = knots)[[1]]$X
+colnames(sm) <- levs <- paste0("f", seq_len(k))
+basis <- pivot_longer(cbind(sm, data), -(x:yobs), names_to = 'bf')
+basis
+
+set.seed(2)
+bfuns <- random_bases(sm, data$x, draws = 20, k = k)
+
+smooth <- bfuns %>%
+    group_by(draw, x) %>%
+    summarise(spline = sum(y)) %>%
+    ungroup()
+
+p1 <- ggplot(smooth) +
+    geom_line(data = smooth, aes(x = x, y = spline), lwd = 1.5) +
+    labs(y = 'f(x)', x = 'x') +
+    theme_minimal(base_size = 16, base_family = 'Fira Sans')
+
+smooth_funs <- animate(
+    p1 + transition_states(draw, transition_length = 4, state_length = 2) + 
+    ease_aes('cubic-in-out'),
+    nframes = 200, height = anim_height, width = anim_width, res = anim_res,
+    dev = anim_dev)
+
+anim_save('resources/spline-anim.gif', smooth_funs)
+```
+
+
+# Splines formed from basis functions
+
+```{r basis-functions, fig.height=6, fig.width = 1.777777*6, echo = FALSE}
+ggplot(basis,
+       aes(x = x, y = value, colour = bf)) +
+    geom_line(lwd = 2, alpha = 0.5) +
+    guides(colour = "none") +
+    labs(x = 'x', y = 'b(x)') +
+    theme_minimal(base_size = 20, base_family = 'Fira Sans')
+```
+
+???
+
+Splines are built up from basis functions
+
+Here I'm showing a cubic regression spline basis with 10 knots/functions
+
+We weight each basis function to get a spline. Here all the basisi functions have the same weight so they would fit a horizontal line
+
+---
+
+# Weight basis functions &#8680; spline
+
+```{r basis-function-animation, results = 'hide', echo = FALSE}
+bfun_plt <- plot(bfuns) +
+    geom_line(data = smooth, aes(x = x, y = spline),
+              inherit.aes = FALSE, lwd = 1.5) +
+    labs(x = 'x', y = 'f(x)') +
+    theme_minimal(base_size = 14, base_family = 'Fira Sans')
+
+bfun_anim <- animate(
+    bfun_plt + transition_states(draw, transition_length = 4, state_length = 2) + 
+    ease_aes('cubic-in-out'),
+    nframes = 200, height = anim_height, width = anim_width, res = anim_res, dev = anim_dev)
+
+anim_save('resources/basis-fun-anim.gif', bfun_anim)
+```
+
+.center[![](resources/basis-fun-anim.gif)]
+
+???
+
+But if we choose different weights we get more wiggly spline
+
+---
+
+# Maximise penalised log-likelihood &#8680; &beta;
+
+```{r basis-functions-anim, results = "hide", echo = FALSE}
+sm2 <- smoothCon(s(x, k = k, bs = "cr"), data = data, knots = knots)[[1]]$X
+beta <- coef(lm(ycent ~ sm2 - 1, data = data))
+wtbasis <- sweep(sm2, 2L, beta, FUN = "*")
+colnames(wtbasis) <- colnames(sm2) <- paste0("F", seq_len(k))
+## create stacked unweighted and weighted basis
+basis <- as_tibble(rbind(sm2, wtbasis)) %>%
+    add_column(x = rep(data$x, times = 2),
+               type = rep(c('unweighted', 'weighted'), each = nrow(sm2)),
+               .before = 1L)
+##data <- cbind(data, fitted = rowSums(scbasis))
+wtbasis <- as_tibble(rbind(sm2, wtbasis)) %>%
+    add_column(x      = rep(data$x, times = 2),
+               fitted = rowSums(.),
+               type   = rep(c('unweighted', 'weighted'), each = nrow(sm2))) %>%
+    pivot_longer(-(x:type), names_to = 'bf')
+basis <- pivot_longer(basis, -(x:type), names_to = 'bf')
+
+p3 <- ggplot(data, aes(x = x, y = ycent)) +
+    geom_point(aes(y = yobs), alpha = 0.2) +
+    geom_line(data = basis,
+              mapping = aes(x = x, y = value, colour = bf),
+              lwd = 1, alpha = 0.5) +
+    geom_line(data = wtbasis,
+              mapping = aes(x = x, y = fitted), lwd = 1, colour = 'black', alpha = 0.75) +
+    guides(colour = "none") +
+    labs(y = 'f(x)', x = 'x') +
+    theme_minimal(base_size = 16, base_family = 'Fira Sans')
+
+crs_fit <- animate(p3 + transition_states(type, transition_length = 4, state_length = 2) + 
+                   ease_aes('cubic-in-out'),
+                   nframes = 100, height = anim_height, width = anim_width, res = anim_res,
+                   dev = anim_dev)
+
+anim_save('./resources/gam-crs-animation.gif', crs_fit)
+```
+
+.center[![](resources/gam-crs-animation.gif)]
+
+???
+
+Fitting a GAM involves finding the weights for the basis functions that produce a spline that fits the data best, subject to some constraints
+
+---
+
+# GAM summary
+
+1. GAMs give us a framework to model flexible nonlinear relationships
+
+2. Use little functions (**basis functions**) to make big functions (**smooths**)
+
+3. Use a **penalty** to trade off wiggliness/generality 
+
+4. Need to make sure your smooths are **wiggly enough**
+
+---
+class: inverse middle center subsection
+
+# GAM meets Arthropods
+
+---
+
+# Arthropod abundance
+
+.center[![:scale 90%](./resources/arthropod-abundance.svg)
+]
+
+---
+
+# Arthropod abundance
+
+Negative binomial GAM fitted to single site (AEG1)
+
+.center[![:scale 70%](./resources/arthropod-abundance-site-aeg1-negbin-gam.svg)
+]
+
+---
+
+# Grassland arthropod abundance
+
+As an example
+
+* Abundance of all identified Arthropods
+
+* Grassland sites only
+
+* Models
+
+    * Linear global and site-specific trends
+    * Smooth trend of `year` plus `site` random intercepts
+    * Regional smooths of `year` plus `site` random intercepts
+    * Regional smooths of `year`, `site` specific *random* smooths
+    * Regional smooths of `year`, year-to-year effects, `site` specific *random* smooths
+
+---
+
+# Random smooths?
+
+* Random intercepts
+* Random slopes
+* Random smooths?
+
+Random smooths yield a separate smooth for each subject
+
+No un-penalized null space (intercept & linear components)
+
+Can be shrunk to 0
+
+Share a wiggliness penalty (plus $\lambda$ for intercepts & slopes)
+
+---
+
+# Random smooth model
+
+`site` specific *random* smooths
+
+.center[![:scale 70%](./resources/arthropod-abundance-m3.svg)
+]
+
+---
+
+# Model A
+
+Regional smooths of `year`, `site` specific *random* smooths
+
+.center[![:scale 80%](./resources/arthropod-abundance-m4.svg)
+]
+
+---
+
+# Model B
+
+Regional smooths of `year`, year-to-year effects, `site` specific *random* smooths
+
+.center[![:scale 80%](./resources/arthropod-abundance-m5.svg)
+]
+
+---
+
+# Results
+
+* Model A (without Y2Y effects): AIC 15122 (255.7 EDF)
+* Model B (with Y2Y effects): AIC 15123 (254.2 EDF)
+* Equivalent mixed linear trend model (with Y2Y effects): AIC 15468 (111.8 EDF)
+
+Use year-to-year effects or not?
+
+--
+
+(For these data) **A** and **B** are different ways to decompose the temporal effects
+
+* Without Y2Y &#8594;	wigglier regional smooths
+* With Y2Y &#8594; less wiggly regional smooths
+
+???
+
+Even with relatively simple data, GAMs yield much better fit than linear equiv.
+
+# Representing trends
+
+With the penalty idea we can imagine several ways to account for temporal effects in GAMs
+
+1. Fixed year effects
+2. Random year effects
+3. MRF equivalent of AR
+4. Smooth
+5. Linear
+
+1 & 5 typically not penalized (but could be via `paraPen`)
+
+Could combine these hierarchically
+
+---
+
+# Rates of change?
+
+In linear models, the slopes (fixed or random) immediately give an estimate of the rate of change
+
+--
+
+What about smooths?
+
+--
+
+We can evaluate the derivative of the smooth at specific time points...
+
+--
+
+...which is more effort but nature isn't so kind as to be simple
+
+---
+
+# Nothing new under the sun
+
+Nothing that new here
+
+Fewster, Buckland, *et al* (2000) *Ecology*
+
+(except Simon Wood's excellent {mgcv} software & ability to fit random smooths)
+
+---
+
+# Conclusions
+
+Very much work in progress... but...
+
+How we model trends in biodiversity data can change our view of losses and gains
+
+Using "smooth" trends gives much better fit for the arthropod data here
+
+Y2Y effects and / or smooth trends represent different decompositions of the *temporal* effect
+
+However, interpretting and visualizing the results of GAM fits is more challenging
+
+---
+
+# Slides
+
+* &copy; Simpson (2022) [![Creative Commons Licence](https://i.creativecommons.org/l/by/4.0/88x31.png)](http://creativecommons.org/licenses/by/4.0/)
+
+* HTML Slide deck [gavinsimpson.github.io/esa-csee-2022/](https://gavinsimpson.github.io/esa-csee-2022/)
+
+* RMarkdown [bit.ly/esa-2022-git](https://bit.ly/esa-2022-git)
+
+* DOI: 10.5281/zenodo.6033546 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6033546.svg)](https://doi.org/10.5281/zenodo.6033546)
