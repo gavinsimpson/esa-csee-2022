@@ -55,7 +55,7 @@ abstract: "Climate change and other human-caused environmental disturbance
 
   This shows that there may be several ways to decompose trends in biodiversity
   data that are equally good at describing those underlying trends. Here, the
-  bias in the estimated linear trends due to many series starting in "good"
+  bias in the estimated linear trends due to many series starting in 'good'
   years can be removed either via the year-to-year random effect or region
   specific smooths, both of which capture the overall tendency for some years
   to have greater arthropod abundance than others."
