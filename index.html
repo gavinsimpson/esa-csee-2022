@@ -170,6 +170,18 @@ Daskalova *et al* (2021) *Insect Conservation &amp; Diversity*
 
 # Generalized Additive Models
 
+Random effects of `Year` are one form of common trend
+
+Also, are a special case of a penalized spline
+
+--
+
+AKA, a GAM
+
+---
+
+# Generalized Additive Models
+
 &lt;br /&gt;
 
 ![](resources/tradeoff-slider.png)
@@ -180,7 +192,7 @@ GAMs are an intermediate-complexity model
 
 * can learn from data without needing to be informed by the user
 * remain interpretable because we can visualize the fitted features
-* fit smooth functions using penalised splines
+* fit smooth functions using penalized splines
 
 ---
 
@@ -197,7 +209,7 @@ Splines are built up from basis functions
 
 Here I'm showing a cubic regression spline basis with 10 knots/functions
 
-We weight each basis function to get a spline. Here all the basisi functions have the same weight so they would fit a horizontal line
+We weight each basis function to get a spline. Here all the basis functions have the same weight so they would fit a horizontal line
 
 ---
 
@@ -213,7 +225,7 @@ But if we choose different weights we get more wiggly spline
 
 ---
 
-# Maximise penalised log-likelihood &amp;#8680; &amp;beta;
+# Maximize penalized log-likelihood &amp;#8680; &amp;beta;
 
 
 
@@ -340,6 +352,8 @@ Use year-to-year effects or not?
 
 Even with relatively simple data, GAMs yield much better fit than linear equiv.
 
+&lt;!-- ---
+
 # Representing trends
 
 With the penalty idea we can imagine several ways to account for temporal effects in GAMs
@@ -352,7 +366,7 @@ With the penalty idea we can imagine several ways to account for temporal effect
 
 1 &amp; 5 typically not penalized (but could be via `paraPen`)
 
-Could combine these hierarchically
+Could combine these hierarchically --&gt;
 
 ---
 
@@ -360,23 +374,15 @@ Could combine these hierarchically
 
 In linear models, the slopes (fixed or random) immediately give an estimate of the rate of change
 
---
-
 What about smooths?
 
 --
 
 We can evaluate the derivative of the smooth at specific time points...
 
---
-
-...which is more effort but nature isn't so kind as to be simple
-
 ---
 
 # Nothing new under the sun
-
-Nothing that new here
 
 Fewster, Buckland, *et al* (2000) *Ecology*
 
@@ -386,15 +392,11 @@ Fewster, Buckland, *et al* (2000) *Ecology*
 
 # Conclusions
 
-Very much work in progress... but...
-
 How we model trends in biodiversity data can change our view of losses and gains
 
 Using "smooth" trends gives much better fit for the arthropod data here
 
 Y2Y effects and / or smooth trends represent different decompositions of the *temporal* effect
-
-However, interpretting and visualizing the results of GAM fits is more challenging
 
 ---
 
@@ -404,9 +406,9 @@ However, interpretting and visualizing the results of GAM fits is more challengi
 
 * HTML Slide deck [gavinsimpson.github.io/esa-csee-2022/](https://gavinsimpson.github.io/esa-csee-2022/)
 
-* RMarkdown [bit.ly/esa-2022-git](https://bit.ly/esa-2022-git)
+* RMarkdown [https://github.com/gavinsimpson/esa-csee-2022](https://github.com/gavinsimpson/esa-csee-2022)
 
-* DOI: 10.5281/zenodo.6033546 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6033546.svg)](https://doi.org/10.5281/zenodo.6033546)
+* DOI: 10.5281/zenodo.7003949 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7003949.svg)](https://doi.org/10.5281/zenodo.7003949)
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
