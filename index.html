@@ -20,7 +20,7 @@ class: inverse, middle, left, my-title-slide, title-slide
 ### Gavin Simpson
 ]
 .institute[
-### Department of Animal Science, Aarhus University
+### Aarhus University
 ]
 .date[
 ### August 18, 2022
@@ -172,11 +172,7 @@ Daskalova *et al* (2021) *Insect Conservation &amp; Diversity*
 
 Random effects of `Year` are one form of common trend
 
-Also, are a special case of a penalized spline
-
---
-
-AKA, a GAM
+Random effects are a special case of a penalized spline
 
 ---
 
@@ -248,11 +244,6 @@ Fitting a GAM involves finding the weights for the basis functions that produce 
 4. Need to make sure your smooths are **wiggly enough** --&gt;
 
 ---
-class: inverse middle center subsection
-
-# GAM meets Arthropods
-
----
 
 # Arthropod abundance
 
@@ -272,7 +263,7 @@ Negative binomial GAM fitted to single site (AEG1)
 
 # Grassland arthropod abundance
 
-As an example
+Our example:
 
 * Abundance of all identified Arthropods
 
@@ -280,7 +271,7 @@ As an example
 
 * Models
 
-    * Linear global and site-specific trends
+    * Linear global and site-specific trends (random slopes &amp; intercepts)
     * Smooth trend of `year` plus `site` random intercepts
     * Regional smooths of `year` plus `site` random intercepts
     * Regional smooths of `year`, `site` specific *random* smooths
@@ -296,11 +287,9 @@ As an example
 
 Random smooths yield a separate smooth for each subject
 
-No un-penalized null space (intercept &amp; linear components)
-
-Can be shrunk to 0
-
 Share a wiggliness penalty (plus `\(\lambda\)` for intercepts &amp; slopes)
+
+But individual trends can have different shape
 
 ---
 
@@ -354,31 +343,15 @@ Even with relatively simple data, GAMs yield much better fit than linear equiv.
 
 &lt;!-- ---
 
-# Representing trends
-
-With the penalty idea we can imagine several ways to account for temporal effects in GAMs
-
-1. Fixed year effects
-2. Random year effects
-3. MRF equivalent of AR
-4. Smooth
-5. Linear
-
-1 &amp; 5 typically not penalized (but could be via `paraPen`)
-
-Could combine these hierarchically --&gt;
-
----
-
 # Nothing new under the sun
 
 Fewster, Buckland, *et al* (2000) *Ecology*
 
-(except Simon Wood's excellent {mgcv} software &amp; ability to fit random smooths)
+(except Simon Wood's excellent {mgcv} software &amp; ability to fit random smooths) --&gt;
 
 ---
 
-# Conclusions
+# Summary
 
 How we model trends in biodiversity data can change our view of losses and gains
 
@@ -399,6 +372,23 @@ Non/linear methods needed if we want to assess changes in rates of change
 * RMarkdown [https://github.com/gavinsimpson/esa-csee-2022](https://github.com/gavinsimpson/esa-csee-2022)
 
 * DOI: 10.5281/zenodo.7003949 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7003949.svg)](https://doi.org/10.5281/zenodo.7003949)
+
+---
+
+# Representing trends
+
+With the penalty idea we can imagine several ways to account for temporal effects in GAMs
+
+1. Fixed year effects
+2. Random year effects
+3. MRF equivalent of AR
+4. Smooth
+5. Linear
+6. ...
+
+1 &amp; 5 typically not penalized (but could be via `paraPen`)
+
+Could combine these hierarchically
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
