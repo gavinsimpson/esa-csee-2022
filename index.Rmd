@@ -126,7 +126,7 @@ $y_i$ sometimes transformed
 
 # Seibold et al 2019
 
-Analysed 150 grassland and 140 forest sites across 3 regions of Gernmany 2008&ndash;2017
+Analysed 150 grassland and 140 forest sites across 3 regions of Germany 2008&ndash;2017
 
 .center[![:scale 75%](./resources/seibold-et-al-2019.png)
 ]
@@ -384,7 +384,7 @@ anim_save('./resources/gam-crs-animation.gif', crs_fit)
 
 Fitting a GAM involves finding the weights for the basis functions that produce a spline that fits the data best, subject to some constraints
 
----
+<!-- ---
 
 # GAM summary
 
@@ -394,7 +394,7 @@ Fitting a GAM involves finding the weights for the basis functions that produce 
 
 3. Use a **penalty** to trade off wiggliness/generality 
 
-4. Need to make sure your smooths are **wiggly enough**
+4. Need to make sure your smooths are **wiggly enough** -->
 
 ---
 class: inverse middle center subsection
@@ -519,18 +519,6 @@ Could combine these hierarchically -->
 
 ---
 
-# Rates of change?
-
-In linear models, the slopes (fixed or random) immediately give an estimate of the rate of change
-
-What about smooths?
-
---
-
-We can evaluate the derivative of the smooth at specific time points...
-
----
-
 # Nothing new under the sun
 
 Fewster, Buckland, *et al* (2000) *Ecology*
@@ -546,6 +534,8 @@ How we model trends in biodiversity data can change our view of losses and gains
 Using "smooth" trends gives much better fit for the arthropod data here
 
 Y2Y effects and / or smooth trends represent different decompositions of the *temporal* effect
+
+Non/linear methods needed if we want to assess changes in rates of change
 
 ---
 
